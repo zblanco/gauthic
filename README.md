@@ -1,6 +1,8 @@
 # Gauthic
 
-**TODO: Add description**
+A helper library for building and fetching Google OAuth tokens in Service Account based flows.
+
+Uses [HTTPact](https://github.com/zblanco/httpact) for HTTP Requests instead of depending on a concrete HTTP Client.
 
 ## Installation
 
