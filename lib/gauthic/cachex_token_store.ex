@@ -5,7 +5,7 @@ defmodule Gauthic.CachexTokenStore do
   Caches tokens with a tuple of the client/account email, alphabetically sorted scopes, and the sub/impersonated email/account.
   Uses a TTL/Time To Live/Expiration of 59 minutes as Google OAuth Tokens last 60 minutes.
 
-  TODO: consider getting the expiration from Token as it's returned in the OAuth response. Trim time from the expiration though.
+  TODO: Separate into another lib as an optional dependency with instructions to configure into your application.
 
   Requires adding the token store to the consuming application's children.
   """

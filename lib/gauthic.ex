@@ -2,7 +2,11 @@ defmodule Gauthic do
   @moduledoc """
   A simple Google OAuth Token utility.
 
-  Gauthic is stateless, HTTP Client agnostic, and allows for an injectable Token Cache.
+  Gauthic is stateless by default, HTTP Client agnostic, and supports an injectable Token Cache.
+
+  By default you must pass in an HTTP Client that conforms to `HTTPact.Client` behaviour using the `:http_client` option.
+
+  You can optionally pass in a module that conforms to the `Gauthic.TokenCache` behaviour using the `:token_cache` option.
 
   ## Usage Example
 
@@ -25,7 +29,9 @@ defmodule Gauthic do
         Gauthic.fetch_authorized_token(
           credentials(),
           scope,
-          Application.get_env(:my_google_api_wrapper, :delegated_authority)
+          Application.get_env(:my_google_api_wrapper, :delegated_authority), # sub
+          http_client: Application.get_env(:my_google_api_wrapper, :http_client) # required
+          token_cache: Application.get_env(:my_google_api_wrapper, :delegated_authority) # optional, but recommended
         )
       token
     end
@@ -45,60 +51,81 @@ defmodule Gauthic do
   alias Gauthic.{
     Credentials,
     Token,
-    TokenCache,
     FetchToken,
   }
 
-  def token_for_scope(creds, scope)
-    when is_binary(scope), do: token_for_scope(creds, [scope])
+  def token_for_scope(_creds, _scope, [http_client: nil]), do: {:error, "An http_client is required"}
 
-  def token_for_scope(%Credentials{} = creds, scope) when is_list(scope) do
-    case TokenCache.find(creds, scope) do
-      {:error, _}  -> fetch_and_cache(creds, scope)
-      {:ok, token} -> {:ok, token}
-    end
-  end
+  def token_for_scope(creds, scope, opts)
+    when is_binary(scope), do: token_for_scope(creds, [scope], opts)
 
-  def token_for_scope(creds, scope, sub)
-    when is_binary(scope), do: token_for_scope(creds, [scope], sub)
-
-  def token_for_scope(%Credentials{} = creds, scope, sub) when is_list(scope) do
-    case TokenCache.find(creds, scope, sub) do
-      {:error, _}  -> fetch_and_cache(creds, scope, sub)
-      {:ok, token} -> {:ok, token}
-    end
-  end
-
-  defp fetch_and_cache(creds, scope) do
-    with {:ok, response} <-
-      creds
-      |> build_jwt(scope)
-      |> FetchToken.new("urn:ietf:params:oauth:grant-type:jwt-bearer")
-      |> FetchToken.to_request()
-      |> HTTPact.execute()
+  def token_for_scope(%Credentials{} = creds, scope, [
+    token_cache: token_cache,
+    http_client: http_client,
+  ]) do
+    with {:error, _}     <- token_cache.find(creds, scope),
+         {:ok, response} <- fetch_token(creds, scope, http_client),
+         {:ok, token}    <- Token.from_response(response, creds.account, scope)
     do
-      token =
-        response
-        |> Token.from_response(creds.account, scope)
-        |> TokenCache.store()
-      {:ok, token}
+      case token_cache.store() do
+        {:ok, token} -> {:ok, token}
+        _            -> {:ok, token}
+      end
+    else
+      {:ok, %Token{}} = token -> {:ok, token}
+      error -> error
     end
   end
 
-  defp fetch_and_cache(creds, scope, sub) do
-    with {:ok, response} <-
-      creds
-      |> build_jwt(scope, sub)
-      |> FetchToken.new("urn:ietf:params:oauth:grant-type:jwt-bearer")
-      |> FetchToken.to_request()
-      |> HTTPact.execute()
-    do
-      token =
-        response
-        |> Token.from_response(creds.account, scope, sub)
-        |> TokenCache.store()
-      {:ok, token}
+  def token_for_scope(%Credentials{} = creds, scope, [http_client: http_client]) when is_list(scope) do
+    case fetch_token(creds, scope, http_client) do
+      {:ok, response} -> Token.from_response(response, creds.account, scope)
+      error -> error
     end
+  end
+
+  def token_for_scope(creds, scope, sub, opts)
+    when is_binary(scope), do: token_for_scope(creds, [scope], sub, opts)
+
+  def token_for_scope(%Credentials{} = creds, scope, sub, [
+    token_cache: token_cache,
+    http_client: http_client,
+  ]) when is_list(scope) do
+    with {:error, _}     <- token_cache.find(creds, scope),
+         {:ok, response} <- fetch_token(creds, scope, sub, http_client),
+         {:ok, token}    <- Token.from_response(response, creds.account, scope)
+    do
+      case token_cache.store() do
+        {:ok, token} -> {:ok, token}
+        _            -> {:ok, token}
+      end
+    else
+      {:ok, %Token{}} = token -> {:ok, token}
+      error -> error
+    end
+  end
+
+  def token_for_scope(%Credentials{} = creds, scope, sub, [http_client: http_client]) when is_list(scope) do
+    case fetch_token(creds, scope, sub, http_client) do
+      {:ok, response} -> Token.from_response(response, creds.account, scope)
+      error -> error
+    end
+  end
+
+  defp fetch_token(creds, scope, http_client) do
+    creds
+    |> build_jwt(scope)
+    |> FetchToken.new("urn:ietf:params:oauth:grant-type:jwt-bearer")
+    |> FetchToken.to_request(http_client)
+    |> HTTPact.execute()
+  end
+
+  defp fetch_token(creds, scope, sub, http_client) do
+    creds
+    |> build_jwt(scope, sub)
+    |> FetchToken.new("urn:ietf:params:oauth:grant-type:jwt-bearer")
+    |> FetchToken.to_request(http_client)
+    |> HTTPact.execute()
   end
 
   def build_jwt(%Credentials{client_email: account, private_key: key}, scope) do

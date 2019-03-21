@@ -1,7 +1,6 @@
 defmodule Gauthic.FetchToken do
   @moduledoc """
-  Command Struct that translates to an HTTP Request for fetching a token against
-  the Google OAuth servers.
+  Command Struct that translates to an HTTP Request for fetching a token against Google OAuth servers.
   """
 
   alias HTTPact.Request
@@ -27,7 +26,7 @@ defmodule Gauthic.FetchToken do
   end
 
   # TODO: different to_request/1 functions for refresh & compute-meta tokens
-  def to_request(%__MODULE__{} = command) do
+  def to_request(%__MODULE__{} = command, http_client) do
     %Request{
       method: :post,
       path: command.url,
@@ -36,7 +35,7 @@ defmodule Gauthic.FetchToken do
         "grant_type" => command.grant_type,
         "assertion" => command.jwt,
       }),
-      http_client: Application.get_env(:google_auth, :http_adapter)
+      http_client: http_client,
     }
   end
 

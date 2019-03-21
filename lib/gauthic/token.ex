@@ -1,6 +1,6 @@
 defmodule Gauthic.Token do
   @moduledoc """
-  A Google OAuth Token that can be used by a Client.
+  The result of calling `Gauthic.token_for_scope` used for authorizing requests to Google API's.
   """
   alias Gauthic.Types
   alias HTTPact.Response
@@ -26,8 +26,6 @@ defmodule Gauthic.Token do
     :type,
   ]
 
-  # %{"access_token" => access_token, "token_type" => token_type, "expires_in" => expires_in}
-  # accept json decoded map of the token returned from google auth servers
   def from_response(
     %Response{status: 200, body: body},
     account,

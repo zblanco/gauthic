@@ -4,7 +4,7 @@ defmodule Gauthic.Credentials do
 
   Credentials must be provided for each `fetch_authorized_token` call.
 
-  As you're typically provided a JSON file with the Service Account Credentials you might build the struct like follows:
+  Credentials are easily built from Service Account JSON using the `new/1` function.
 
   ```elixir
   {:ok, decoded_credentials} =
