@@ -153,8 +153,9 @@ defmodule Gauthic do
   end
 
   defp claims(account, scope, sub) do
-    claims = claims(account, scope)
-    %{claims | "sub" => sub}
+    account
+    |> claims(scope)
+    |> Map.put_new("sub", sub)
   end
 
 end
