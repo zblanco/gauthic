@@ -24,7 +24,7 @@ defmodule Gauthic do
 
     alias Gauthic.{Token, Credentials}
 
-    def fetch_token(scope) when is_binary(scope) do
+    def token_for_scope(scope) when is_binary(scope) do
       {:ok, %Token{token: token}} =
         Gauthic.fetch_authorized_token(
           credentials(),
@@ -65,7 +65,7 @@ defmodule Gauthic do
   ]) do
     with {:error, _}     <- token_cache.find(creds, scope),
          {:ok, response} <- fetch_token(creds, scope, http_client),
-         {:ok, token}    <- Token.from_response(response, creds.account, scope)
+         {:ok, token}    <- Token.from_response(response, creds.client_email, scope)
     do
       case token_cache.store() do
         {:ok, token} -> {:ok, token}
@@ -79,7 +79,7 @@ defmodule Gauthic do
 
   def token_for_scope(%Credentials{} = creds, scope, [http_client: http_client]) when is_list(scope) do
     case fetch_token(creds, scope, http_client) do
-      {:ok, response} -> Token.from_response(response, creds.account, scope)
+      {:ok, response} -> Token.from_response(response, creds.client_email, scope)
       error -> error
     end
   end
@@ -93,7 +93,7 @@ defmodule Gauthic do
   ]) when is_list(scope) do
     with {:error, _}     <- token_cache.find(creds, scope),
          {:ok, response} <- fetch_token(creds, scope, sub, http_client),
-         {:ok, token}    <- Token.from_response(response, creds.account, scope)
+         {:ok, token}    <- Token.from_response(response, creds.client_email, scope)
     do
       case token_cache.store() do
         {:ok, token} -> {:ok, token}
@@ -107,7 +107,7 @@ defmodule Gauthic do
 
   def token_for_scope(%Credentials{} = creds, scope, sub, [http_client: http_client]) when is_list(scope) do
     case fetch_token(creds, scope, sub, http_client) do
-      {:ok, response} -> Token.from_response(response, creds.account, scope)
+      {:ok, response} -> Token.from_response(response, creds.client_email, scope)
       error -> error
     end
   end
