@@ -7,12 +7,17 @@ defmodule GoogleAuthMock do
 
   def execute(%Request{
     method: :post,
-    path: _url,
-    headers: [{"Content-Type", "application/x-www-form-urlencoded"}],
+    path: _path,
+    headers: _headers,
     body: _body,
-  } = request) do
-    %Response{
-
-    }
+  }) do
+    {:ok, %Response{
+      status: 200,
+      body: Jason.encode!(%{
+        "access_token" => "some_access_token",
+        "token_type"   => "Bearer",
+        "expires_in"   => 3600,
+      })
+    }}
   end
 end
