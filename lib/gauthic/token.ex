@@ -32,17 +32,20 @@ defmodule Gauthic.Token do
     scope,
     sub
   ) do
-    with {:ok,
-      %{"access_token" => access_token, "token_type" => type, "expires_in" => expires}
+    with {:ok, %{
+        "access_token" => access_token,
+        "token_type" => type,
+        "expires_in" => expires
+      }
     } <- Jason.decode(body) do
-      %__MODULE__{
+      {:ok, %__MODULE__{
         token: access_token,
         expires: expires,
         type: type,
         sub: sub,
         scope: scope,
         account: account,
-      }
+      }}
     end
   end
 
@@ -51,17 +54,19 @@ defmodule Gauthic.Token do
     account,
     scope
   ) do
-    with {:ok,
-      %{"access_token" => access_token, "token_type" => type, "expires_in" => expires}
+    with {:ok, %{
+        "access_token" => access_token,
+        "token_type"   => type,
+        "expires_in"   => expires
+      }
     } <- Jason.decode(body) do
-      %__MODULE__{
+      {:ok, %__MODULE__{
         token: access_token,
         expires: expires,
         type: type,
         scope: scope,
         account: account,
-      }
+      }}
     end
   end
-
 end
