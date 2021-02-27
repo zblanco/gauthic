@@ -1,81 +1,68 @@
-# Gauthic
+<!-- MDOC !-->
 
-A helper library for building and fetching Google OAuth tokens in [Service Account based flows](https://developers.google.com/identity/protocols/OAuth2ServiceAccount).
+A simple Google OAuth Token utility.
 
-Gauthic was designed to be agnostic and flexible to your choice of HTTP Client, Caching, and method of providing Service Account Credentials. Gauthic does this by using the [HTTPact](https://github.com/zblanco/httpact) Contract instead of depending on a concrete HTTP client, passing configuration like `Credentials` through function parameters, and being stateless by default.
+Gauthic is HTTP Client agnostic, runtime configurable, and supports an injectable Token Cache.
 
-Guathic provides a `TokenCache` behaviour so Gauthic can be configured to minimize work rebuilding and refetching tokens for each request. You can use [GauthicTokenCachex]() to do so.
+You can use `Gauthic.token_for_scope/3` to fetch Google OAuth tokens for your Google OAuth credentials that can be used in subsequent
+  requests with Google's APIs.
 
-### **Warning** HTTPact is still in-development and experimental, so it's recommended to use the [Goth](https://github.com/peburrows/goth) until otherwise.
+** Currently Gauthic only supports Service Account Bearer token flows for server to server API requests. **
 
-## Usage
+To use Gauthic you will first need to [register a Google Service Account](https://developers.google.com/identity/protocols/oauth2/service-account#httprest)
+  and configure your application to retrieve those credentials. All configuration of credentials for Gauthic happens through function calls
+  at runtime to `Gauthic.token_for_scope/3` or by building credentials directly with `Gauthic.Credentials.new/1` meaning using different sets
+  of credentials for different calls can be managed by your application as needed.
 
-1. Add Gauthic to your dependencies:
+By default Gauthic makes HTTP Requests using the [Finch library](https://github.com/keathley/finch), but any `HTTPact.Client` implementation
+  can be used if desired.
 
-```elixir
-def deps do
-  [
-    {:gauthic, "~> 0.1.0"},
-  ]
-end
-```
+Additionally Gauthic supports token caching through the `Gauthic.TokenCache` behaviour and `Gauthic.token_for_scope/3` `:token_cache option.
+  The `Gauthic.ETSTokenCache` which utilizes Erlang Term Storage (ETS) for caching tokens can be configured for this purpose.
+  It is recommended to use a cache with Gauthic in production as not doing so will mean an HTTP Request to Google's OAuth servers for every request you make.
 
-2. (Optional) add a Gauthic `TokenCache` such as [GauthicTokenCachex]() to your `mix.exs`
+  ## Installation & Usage Example
 
-```elixir
-def deps do
-  [
-    ...
-    {:gauthic, "~> 0.1.0"},
-    {:gauthic_token_cachex, "~> 0.1.0"},
-  ]
-end
-```
+  First add Gauthic to your dependencies in mix.exs:
 
-and to your supervisor tree:
+  ```elixir
+  defp deps do
+    [
+      {:gauthic, "~> 0.1.0"},
+    ]
+  end
+  ```
 
-```elixir
-children = [
-  {GauthicTokenCachex, []}
-]
-```
+  Wrap calls to Gauthic in some utility module with logic to utilize configured credentials.
 
-3. Call `Gauthic.fetch_token` with Credentials, and the scope of the Google API Request
+  ```elixir
+  defmodule MyGoogleAPIWrapper.Auth do
+    def token_for_scope(scope) when is_binary(scope) do
+      Gauthic.token_for_scope(
+        credentials(),
+        scope,
+        token_cache: {MyGoogleAPIWrapper.TokenCache, Gauthic.ETSTokenCache}
+      )
+    end
 
-```elixir
+    def token_for_scope(scope, sub) when is_binary(scope) and is_binary(sub) do
+      Gauthic.token_for_scope(
+        credentials(),
+        scope,
+        sub: sub,
+        token_cache: {MyGoogleAPIWrapper.TokenCache, Gauthic.ETSTokenCache}
+      )
+    end
 
-# Explicitly pass HTTP Client Module
-{:ok, token} = Gauthic.token_for_scope(
-  credentials,
-  scope,
-  sub: sub,
-  http_client: HTTPoisonPact,
-)
+    defp credentials() do
+      {:ok, credentials} =
+        Application.get_env(:my_google_api_wrapper, :service_account_credentials)
+        |> File.read!()
+        |> Jason.decode()
 
-# Configure from Application.env
-{:ok, token} = Gauthic.token_for_scope(
-  credentials,
-  scope,
-  sub: sub,
-  http_client: Application.get_env(:my_google_api_wrapper, :http_client),
-)
+      creds
+    end
+  end
+  ```
 
-```
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `gauthic` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:gauthic, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/gauthic](https://hexdocs.pm/gauthic).
-
+  See the HexDocs for `Gauthic.ETSTokenCache` for details on configuring the built-in cache to your application.

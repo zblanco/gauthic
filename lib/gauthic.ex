@@ -1,70 +1,10 @@
 defmodule Gauthic do
-  @moduledoc """
-  A simple Google OAuth Token utility.
+  @external_resource "README.md"
+  @moduledoc "README.md"
+             |> File.read!()
+             |> String.split("<!-- MDOC !-->")
+             |> Enum.fetch!(1)
 
-  Gauthic is HTTP Client agnostic, runtime configurable, and supports an injectable Token Cache.
-
-  You can use `Gauthic.token_for_scope/3` to fetch Google OAuth tokens for your Google OAuth credentials that can be used in subsequent
-    requests with Google's APIs.
-
-  ** Currently Gauthic only supports Service Account Bearer token flows for server to server API requests. **
-
-  To use Gauthic you will first need to [register a Google Service Account](https://developers.google.com/identity/protocols/oauth2/service-account#httprest)
-    and configure your application to retrieve those credentials. All configuration of credentials for Gauthic happens through function calls
-    at runtime to `Gauthic.token_for_scope/3` or by building credentials directly with `Gauthic.Credentials.new/1` meaning using different sets
-    of credentials for different calls can be managed by your application as needed.
-
-  By default Gauthic makes HTTP Requests using the [Finch library](https://github.com/keathley/finch), but any `HTTPact.Client` implementation
-    can be used if desired.
-
-  Additionally Gauthic supports token caching through the `Gauthic.TokenCache` behaviour and `Gauthic.token_for_scope/3` `:token_cache option.
-    The `Gauthic.ETSTokenCache` which utilizes Erlang Term Storage (ETS) for caching tokens can be configured for this purpose.
-    It is recommended to use a cache with Gauthic in production as not doing so will mean an HTTP Request to Google's OAuth servers for every request you make.
-
-  ## Usage Example
-
-  ### First add Gauthic to your dependencies in mix.exs:
-  ```elixir
-  defp deps do
-    [
-      # ...
-      {:gauthic, "~> 0.1.0"},
-    ]
-  end
-
-  ### Wrap calls to Gauthic in some utility module with logic to utilize configured credentials.
-  ```elixir
-  defmodule MyGoogleAPIWrapper.Auth do
-    def token_for_scope(scope) when is_binary(scope) do
-      Gauthic.token_for_scope(
-        credentials(),
-        scope,
-        token_cache: {MyGoogleAPIWrapper.TokenCache, Gauthic.ETSTokenCache}
-      )
-    end
-
-    def token_for_scope(scope, sub) when is_binary(scope) and is_binary(sub) do
-      Gauthic.token_for_scope(
-        credentials(),
-        scope,
-        sub: sub,
-        token_cache: {MyGoogleAPIWrapper.TokenCache, Gauthic.ETSTokenCache}
-      )
-    end
-
-    defp credentials() do
-      {:ok, credentials} =
-        Application.get_env(:my_google_api_wrapper, :service_account_credentials)
-        |> File.read!()
-        |> Jason.decode()
-
-      creds
-    end
-  end
-  ```
-
-  ## See `Gauthic.ETSTokenCache` for details on configuring it in your application.
-  """
   alias Gauthic.{
     Credentials,
     Token,
@@ -86,18 +26,18 @@ defmodule Gauthic do
 
   ## Examples
 
-    # without any options, using defaults
-    my_credentials = File.read!("some_path/credentials.json)
-    Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user")
+      # without any options, using defaults
+      my_credentials = File.read!("some_path/credentials.json")
+      Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user")
 
-    # using a delegated authority / sub
-    Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user", sub: "bob.test@my_domain.com")
+      # using a delegated authority / sub
+      Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user", sub: "bob.test@my_domain.com")
 
-    # using a token cache see `Gauthic.ETSTokenCache` for a local ETS cache implementation you can use
-    Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user", token_cache: {MyTokenCache, Gauthic.ETSTokenCache})
+      # using a token cache see `Gauthic.ETSTokenCache` for a local ETS cache implementation you can use
+      Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user", token_cache: {MyTokenCache, Gauthic.ETSTokenCache})
 
-    # using a different implementation of an HTTPact.Client
-    Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user", http_client: SomeOtherHTTPactClient)
+      # using a different implementation of an HTTPact.Client
+      Gauthic.token_for_scope(my_credentials, "https://www.googleapis.com/auth/admin.directory.user", http_client: SomeOtherHTTPactClient)
   """
   def token_for_scope(creds, scope, opts \\ []) do
     {token_cache, opts} = Keyword.pop(opts, :token_cache)
