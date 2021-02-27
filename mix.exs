@@ -24,7 +24,6 @@ defmodule Gauthic.MixProject do
       {:joken, "~> 2.0"},
       {:mint, "~> 1.2"},
       {:httpact, github: "zblanco/httpact"},
-      {:cachex, "~> 3.1"},
     ]
   end
 end
