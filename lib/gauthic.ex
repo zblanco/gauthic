@@ -91,7 +91,10 @@ defmodule Gauthic do
 
   defp fetch_token_with_client(%FetchToken{http_client: http_client} = cmd) do
     with %Token{} = token <- HTTPact.execute(cmd, http_client) do
-      {:ok, token}
+      {:ok,
+       token
+       |> Token.set_account(cmd.credentials.client_email)
+       |> Token.set_scope(cmd.scope)}
     else
       {:error, _msg} = error -> error
       something_else -> {:error, something_else}

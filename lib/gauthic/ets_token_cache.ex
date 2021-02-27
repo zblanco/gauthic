@@ -55,10 +55,10 @@ defmodule Gauthic.ETSTokenCache do
   defp token_key(%Token{account: account, scope: scope, sub: sub}),
     do: {account, Enum.sort(scope), sub}
 
-  defp token_key(%FetchToken{credentials: %{account: account}, scope: scope, sub: nil}),
+  defp token_key(%FetchToken{credentials: %{client_email: account}, scope: scope, sub: nil}),
     do: {account, Enum.sort(scope)}
 
-  defp token_key(%FetchToken{credentials: %{account: account}, scope: scope, sub: sub}),
+  defp token_key(%FetchToken{credentials: %{client_email: account}, scope: scope, sub: sub}),
     do: {account, Enum.sort(scope), sub}
 
   defp expiration(token) do
