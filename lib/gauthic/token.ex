@@ -3,19 +3,18 @@ defmodule Gauthic.Token do
   The result of calling `Gauthic.token_for_scope` used for authorizing requests to Google API's.
   """
   alias Gauthic.Types
-  alias HTTPact.Response
 
   @typedoc """
   A token used to authorized requests with Google APIs.
   """
   @type t() :: %__MODULE__{
-    token: String.t(),
-    expires: non_neg_integer(),
-    sub: Types.sub(),
-    scope: Types.scope(),
-    account: String.t(),
-    type: String.t(),
-  }
+          token: String.t(),
+          expires: non_neg_integer(),
+          sub: Types.sub(),
+          scope: Types.scope(),
+          account: String.t(),
+          type: String.t()
+        }
 
   defstruct [
     :token,
@@ -23,50 +22,32 @@ defmodule Gauthic.Token do
     :sub,
     :scope,
     :account,
-    :type,
+    :type
   ]
 
-  def from_response(
-    %Response{status: 200, body: body},
-    account,
-    scope,
-    sub
-  ) do
-    with {:ok, %{
-        "access_token" => access_token,
-        "token_type" => type,
-        "expires_in" => expires
-      }
-    } <- Jason.decode(body) do
-      {:ok, %__MODULE__{
-        token: access_token,
-        expires: expires,
-        type: type,
-        sub: sub,
-        scope: scope,
-        account: account,
-      }}
-    end
+  def set_scope(%__MODULE__{} = token, scope) do
+    %__MODULE__{token | scope: scope}
   end
 
-  def from_response(
-    %Response{status: 200, body: body},
-    account,
-    scope
-  ) do
-    with {:ok, %{
-        "access_token" => access_token,
-        "token_type"   => type,
-        "expires_in"   => expires
-      }
-    } <- Jason.decode(body) do
-      {:ok, %__MODULE__{
-        token: access_token,
-        expires: expires,
-        type: type,
-        scope: scope,
-        account: account,
-      }}
+  def set_account(%__MODULE__{} = token, account) do
+    %__MODULE__{token | account: account}
+  end
+
+  defimpl HTTPact.Entity, for: Gauthic.Token do
+    def from_response(%HTTPact.Response{status: 200, body: body}) do
+      with {:ok,
+            %{
+              "access_token" => access_token,
+              "token_type" => type,
+              "expires_in" => expires
+            }} <- Jason.decode(body) do
+        {:ok,
+         %Gauthic.Token{
+           token: access_token,
+           expires: expires,
+           type: type
+         }}
+      end
     end
   end
 end

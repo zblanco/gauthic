@@ -52,110 +52,73 @@ defmodule Gauthic do
     Credentials,
     Token,
     FetchToken,
+    Clients.MintClient
   }
 
-  def token_for_scope(_creds, _scope, [http_client: nil]), do: {:error, "An http_client is required"}
+  @doc """
+  Retrieves a Google OAuth Token for a given scope.
 
-  def token_for_scope(creds, scope, opts)
-    when is_binary(scope), do: token_for_scope(creds, [scope], opts)
+  Accepts the following options:
 
-  def token_for_scope(%Credentials{} = creds, scope, [
-    token_cache: token_cache,
-    http_client: http_client,
-  ]) do
-    with {:error, _}     <- token_cache.find(creds, scope),
-         {:ok, response} <- fetch_token(creds, scope, http_client),
-         {:ok, token}    <- Token.from_response(response, creds.client_email, scope)
-    do
-      case token_cache.store() do
-        {:ok, token} -> {:ok, token}
-        _            -> {:ok, token}
-      end
+  * `:token_cache` a tuple of {cache_name, cache} where the cache name is the term passed into TokenCache calls and the cache
+      is a module that implements the Gauthic.TokenCache behaviour.
+      Gauthic will not use a cache unless specified to do so, and should the cache fail
+      but a request to fetch the token succeed - will still return the token.
+  * `:http_client` defaults to a Mint implementation (Gauthic.MintClient), but will accept any http client that conforms to the HTTPact.Client behaviour.
+  * `:sub` The "substitute" or delegated authority of the user the token's subsequent requests are for.
+  """
+  def token_for_scope(creds, scope, opts \\ []) do
+    {token_cache, opts} = Keyword.pop(opts, :token_cache)
+    {http_client, opts} = Keyword.pop(opts, :http_client, MintClient)
+    {sub, _opts} = Keyword.pop(opts, :sub)
+
+    with {:ok, creds} <- Credentials.new(creds),
+         {:ok, cmd} <- FetchToken.new(creds, scope, sub, http_client),
+         {:is_cached?, _cmd, nil, false} <-
+           {:is_cached?, cmd, token_cache, is_cached?(cmd, token_cache)} do
+      fetch_token_with_client(cmd)
     else
-      {:ok, %Token{}} = token -> {:ok, token}
-      error -> error
+      {:is_cached?, cmd, token_cache, false} ->
+        fetch_token_then_cache(cmd, token_cache)
+
+      {:is_cached?, cmd, token_cache, true} ->
+        fetch_token_from_cache(cmd, token_cache)
+
+      {:error, _msg} = error ->
+        error
     end
   end
 
-  def token_for_scope(%Credentials{} = creds, scope, [http_client: http_client]) when is_list(scope) do
-    case fetch_token(creds, scope, http_client) do
-      {:ok, response} -> Token.from_response(response, creds.client_email, scope)
-      error -> error
-    end
-  end
-
-  def token_for_scope(creds, scope, sub, opts)
-    when is_binary(scope), do: token_for_scope(creds, [scope], sub, opts)
-
-  def token_for_scope(%Credentials{} = creds, scope, sub, [
-    token_cache: token_cache,
-    http_client: http_client,
-  ]) when is_list(scope) do
-    with {:error, _}     <- token_cache.find(creds, scope),
-         {:ok, response} <- fetch_token(creds, scope, sub, http_client),
-         {:ok, token}    <- Token.from_response(response, creds.client_email, scope)
-    do
-      case token_cache.store() do
-        {:ok, token} -> {:ok, token}
-        _            -> {:ok, token}
-      end
+  defp fetch_token_with_client(%FetchToken{http_client: http_client} = cmd) do
+    with %Token{} = token <- HTTPact.execute(cmd, http_client) do
+      {:ok, token}
     else
-      {:ok, %Token{}} = token -> {:ok, token}
-      error -> error
+      {:error, _msg} = error -> error
+      something_else -> {:error, something_else}
     end
   end
 
-  def token_for_scope(%Credentials{} = creds, scope, sub, [http_client: http_client]) when is_list(scope) do
-    case fetch_token(creds, scope, sub, http_client) do
-      {:ok, response} -> Token.from_response(response, creds.client_email, scope)
-      error -> error
+  defp fetch_token_then_cache(cmd, {cache_name, token_cache}) do
+    with {:ok, token} <- fetch_token_with_client(cmd),
+         {:ok, token} <- {token_cache.store(cache_name, token), token} do
+      {:ok, token}
+    else
+      {_otherwise, token} -> {:ok, token}
     end
   end
 
-  defp fetch_token(creds, scope, http_client) do
-    creds
-    |> build_jwt(scope)
-    |> FetchToken.new("urn:ietf:params:oauth:grant-type:jwt-bearer")
-    |> FetchToken.to_request(http_client)
-    |> HTTPact.execute()
+  defp is_cached?(_cmd, nil), do: false
+
+  defp is_cached?(cmd, {cache_name, token_cache}) when is_atom(token_cache) do
+    with true <- token_cache.is_cached?(cache_name, cmd) do
+      true
+    else
+      _otherwise -> false
+    end
   end
 
-  defp fetch_token(creds, scope, sub, http_client) do
-    creds
-    |> build_jwt(scope, sub)
-    |> FetchToken.new("urn:ietf:params:oauth:grant-type:jwt-bearer")
-    |> FetchToken.to_request(http_client)
-    |> HTTPact.execute()
-  end
+  defp is_cached?(_cmd, _), do: false
 
-  def build_jwt(%Credentials{client_email: account, private_key: key}, scope) do
-    claims(account, scope) |> sign_jwt(key)
-  end
-  def build_jwt(%Credentials{client_email: account, private_key: key}, scope, sub) do
-    claims(account, scope, sub) |> sign_jwt(key)
-  end
-
-  defp sign_jwt(claims, key) do
-    signer = Joken.Signer.create("RS256", %{"pem" => key})
-    {:ok, signed_jwt} = Joken.Signer.sign(claims, signer)
-    signed_jwt
-  end
-
-  defp claims(account, scope) when is_binary(account) and is_list(scope) do
-    iat = :os.system_time(:seconds)
-    %{
-      "iss" => account,
-      "scope" => Enum.join(scope, " "),
-      "aud" => "https://www.googleapis.com/oauth2/v4/token",
-      "exp" => iat + 10,
-      "iat" => iat,
-    }
-  end
-
-  defp claims(account, scope, sub) do
-    account
-    |> claims(scope)
-    |> Map.put_new("sub", sub)
-  end
-
+  defp fetch_token_from_cache(cmd, {cache_name, token_cache}),
+    do: token_cache.fetch(cache_name, cmd)
 end

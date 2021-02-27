@@ -3,19 +3,15 @@ defmodule Gauthic.TokenCache do
   Behaviour/Contract that a Token Cache must implement.
   """
   alias Gauthic.{
-    Credentials,
     Token,
-    Types,
+    FetchToken
   }
 
-  @callback find(Credentials.t(), Types.scope()) ::
-    {:ok, Token.t()}
-    | {:error, any()}
+  @callback fetch(cache_name :: any(), FetchToken.t()) ::
+              {:ok, Token.t()}
+              | {:error, any()}
 
-  @callback find(Credentials.t(), Types.scope(), Types.sub()) ::
-    {:ok, Token.t()}
-    | {:error, any()}
+  @callback store(cache_name :: any(), Token.t()) :: :ok | {:error, any()} | :error
 
-  @callback store(Token.t()) :: {:ok, Token.t()} | {:error, any()}
-
+  @callback is_cached?(cache_name :: any(), FetchToken.t()) :: boolean()
 end

@@ -22,7 +22,8 @@ defmodule Gauthic.MixProject do
     [
       {:jason, "~> 1.1"},
       {:joken, "~> 2.0"},
-      {:httpact, github: "zblanco/httpact", branch: "operation_protocol"},
+      {:mint, "~> 1.2"},
+      {:httpact, github: "zblanco/httpact"},
       {:cachex, "~> 3.1"},
     ]
   end
