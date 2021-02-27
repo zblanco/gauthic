@@ -2,24 +2,31 @@ defmodule Gauthic.Credentials do
   @moduledoc """
   Credentials needed for a token provider to sign and fetch tokens.
 
-  Credentials must be provided for each `fetch_authorized_token` call.
+  Credentials must be provided for each `Gauthic.token_for_scope/2` and `Gauthic.token_for_scope/3` call.
 
   Credentials are easily built from Service Account JSON using the `new/1` function.
 
+  ## Examples
+
   ```elixir
+  json_credentials =
+    Application.get_env(:my_google_api_integration, :service_account_credentials) # configuration for your app containing the file path of service account credentials
+    |> File.read!()
+
+  {:ok, credentials} = Gauthic.Credentials.new(json_credentials)
+
+  # or decode the credentials yourself using the json library of your choice
+
   {:ok, decoded_credentials} =
-    Application.get_env(:my_google_api_integration, :service_account_credentials)
+    "some_path/credentials.json"
     |> File.read!()
     |> Jason.decode()
 
   {:ok, credentials} = Gauthic.Credentials.new(decoded_credentials)
+
+
   ```
 
-  Where your config might point to a path like this:
-  ```elixir
-  ...
-  config :my_google_integration,
-    service_account_credentials: System.get_env("MY_GOOGLE_INTEGRATION_APP_CREDENTIALS")
   """
   @enforce_keys [
     :type,
@@ -60,6 +67,8 @@ defmodule Gauthic.Credentials do
           client_x509_cert_url: String.t()
         }
 
+  @spec new(binary | map | Gauthic.Credentials.t()) ::
+          {:error, Jason.DecodeError.t()} | {:ok, Gauthic.Credentials.t()}
   def new(%{
         auth_provider_x509_cert_url: auth_provider_x509_cert_url,
         auth_uri: auth_uri,
@@ -86,6 +95,8 @@ defmodule Gauthic.Credentials do
        type: type
      }}
   end
+
+  def new(%__MODULE__{} = creds), do: {:ok, creds}
 
   def new(%{} = params) do
     atomized_params = for {key, val} <- params, into: %{}, do: {String.to_existing_atom(key), val}

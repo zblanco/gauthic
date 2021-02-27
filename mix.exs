@@ -22,7 +22,7 @@ defmodule Gauthic.MixProject do
     [
       {:jason, "~> 1.1"},
       {:joken, "~> 2.0"},
-      {:mint, "~> 1.2"},
+      {:finch, "~> 0.6"},
       {:httpact, github: "zblanco/httpact"},
     ]
   end
