@@ -8,12 +8,13 @@ defmodule Gauthic.FinchClient do
 
   @impl true
   def execute(%Request{} = request) do
-    finch_request = Finch.build(
-      request.method,
-      request.path,
-      request.headers,
-      request.body
-    )
+    finch_request =
+      Finch.build(
+        request.method,
+        request.path,
+        request.headers,
+        request.body
+      )
 
     with {:ok, finch_response} <- make_finch_request(finch_request) do
       {:ok, build_response(finch_response)}

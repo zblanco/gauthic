@@ -11,7 +11,7 @@ defmodule Gauthic.FetchToken do
   @type t :: %__MODULE__{
           credentials: Credentials.t(),
           scope: Types.scope(),
-          sub: Types.sub | nil,
+          sub: Types.sub() | nil,
           http_client: module(),
           url: binary(),
           jwt: any(),
@@ -42,15 +42,16 @@ defmodule Gauthic.FetchToken do
     url = url(grant_type)
     jwt = JWT.build(creds, scope, sub, url)
 
-    {:ok, %__MODULE__{
-      credentials: creds,
-      scope: scope,
-      http_client: http_client,
-      grant_type: grant_type,
-      url: url,
-      sub: sub,
-      jwt: jwt
-    }}
+    {:ok,
+     %__MODULE__{
+       credentials: creds,
+       scope: scope,
+       http_client: http_client,
+       grant_type: grant_type,
+       url: url,
+       sub: sub,
+       jwt: jwt
+     }}
   end
 
   defp scope(scope) when is_list(scope), do: scope
