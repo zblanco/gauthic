@@ -56,9 +56,10 @@ defmodule Gauthic.FetchToken do
   defp scope(scope) when is_list(scope), do: scope
   defp scope(scope) when is_binary(scope), do: [scope]
 
-  defp grant_type(type) when type in [:bearer], do: grant_type(type)
-  defp grant_type(:bearer), do: "urn:ietf:params:oauth:grant-type:jwt-bearer"
-  defp grant_type(_), do: grant_type(:bearer)
+  # defp grant_type(type) when type in [:bearer], do: grant_type(type)
+  # defp grant_type(:bearer), do: "urn:ietf:params:oauth:grant-type:jwt-bearer"
+  # defp grant_type(_), do: grant_type(:bearer)
+  defp grant_type(_), do: "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
   defp url("urn:ietf:params:oauth:grant-type:jwt-bearer"),
     do: "https://www.googleapis.com/oauth2/v4/token"

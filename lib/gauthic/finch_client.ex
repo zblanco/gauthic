@@ -16,7 +16,7 @@ defmodule Gauthic.FinchClient do
     )
 
     with {:ok, finch_response} <- make_finch_request(finch_request) do
-      build_response(finch_response)
+      {:ok, build_response(finch_response)}
     else
       {:error, _} = error -> error
     end

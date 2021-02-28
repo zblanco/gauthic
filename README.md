@@ -17,7 +17,7 @@ To use Gauthic you will first need to [register a Google Service Account](https:
 By default Gauthic makes HTTP Requests using the [Finch library](https://github.com/keathley/finch), but any `HTTPact.Client` implementation
   can be used if desired.
 
-Additionally Gauthic supports token caching through the `Gauthic.TokenCache` behaviour and `Gauthic.token_for_scope/3` `:token_cache option.
+Gauthic supports token caching through the `Gauthic.TokenCache` behaviour and the `:token_cache` option of `Gauthic.token_for_scope/3`.
   The `Gauthic.ETSTokenCache` which utilizes Erlang Term Storage (ETS) for caching tokens can be configured for this purpose.
   It is recommended to use a cache with Gauthic in production as not doing so will mean an HTTP Request to Google's OAuth servers for every request you make.
 

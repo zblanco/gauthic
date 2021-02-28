@@ -31,7 +31,7 @@ defmodule Gauthic.MixProject do
       {:jason, "~> 1.1"},
       {:joken, "~> 2.0"},
       {:finch, "~> 0.6"},
-      {:httpact, github: "zblanco/httpact"},
+      {:httpact, github: "zblanco/httpact", branch: "zw/contextual-entity-protocol"},
     ]
   end
 

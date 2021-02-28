@@ -25,28 +25,27 @@ defmodule Gauthic.Token do
     :type
   ]
 
-  def set_scope(%__MODULE__{} = token, scope) do
-    %__MODULE__{token | scope: scope}
-  end
-
-  def set_account(%__MODULE__{} = token, account) do
-    %__MODULE__{token | account: account}
-  end
-
-  defimpl HTTPact.Entity, for: Gauthic.Token do
-    def from_response(%HTTPact.Response{status: 200, body: body}) do
+  defimpl HTTPact.Entity, for: Gauthic.FetchToken do
+    def from_response(%Gauthic.FetchToken{} = cmd, %HTTPact.Response{status: 200, body: body}) do
       with {:ok,
             %{
               "access_token" => access_token,
               "token_type" => type,
               "expires_in" => expires
             }} <- Jason.decode(body) do
-        {:ok,
-         %Gauthic.Token{
-           token: access_token,
-           expires: expires,
-           type: type
-         }}
+        %Gauthic.Token{
+          token: access_token,
+          expires: expires,
+          type: type,
+          account: cmd.credentials.client_email,
+          scope: cmd.scope
+        }
+      end
+    end
+
+    def from_response(%Gauthic.FetchToken{}, %HTTPact.Response{status: 400, body: body}) do
+      with {:ok, error_body} <- Jason.decode(body) do
+        {:error, error_body}
       end
     end
   end

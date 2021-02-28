@@ -92,7 +92,7 @@ defmodule GauthicTest do
         Gauthic.token_for_scope(
           credentials,
           "https://www.googleapis.com/auth/admin.directory.user",
-          "sub@sub.com",
+          sub: "sub@sub.com",
           http_client: GoogleAuthMock
         )
 
