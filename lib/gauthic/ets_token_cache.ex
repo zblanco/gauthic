@@ -33,6 +33,14 @@ defmodule Gauthic.ETSTokenCache do
     FetchToken
   }
 
+  def start_link(opts) do
+    name =
+      Keyword.get(opts, :name) ||
+        raise ArgumentError, "must supply a name to identify this Gauthic.ETSTokenCache process"
+
+    GenServer.start_link(__MODULE__, name, name: name)
+  end
+
   @impl true
   @doc """
   Stores a given token in the given cache.
@@ -94,11 +102,7 @@ defmodule Gauthic.ETSTokenCache do
   end
 
   @impl true
-  def init(opts) do
-    name =
-      Keyword.get(opts, :name) ||
-        raise ArgumentError, "must supply a name to identify this Gauthic.ETSTokenCache process"
-
+  def init(name) do
     :ets.new(name, [:named_table, :set, :public, read_concurrency: true, write_concurrency: true])
     {:ok, %{name: name}}
   end

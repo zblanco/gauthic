@@ -55,7 +55,7 @@ Gauthic supports token caching through the `Gauthic.TokenCache` behaviour and th
     end
 
     defp credentials() do
-      {:ok, credentials} =
+      {:ok, creds} =
         Application.get_env(:my_google_api_wrapper, :service_account_credentials)
         |> File.read!()
         |> Jason.decode()
