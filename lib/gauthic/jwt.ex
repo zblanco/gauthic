@@ -7,7 +7,7 @@ defmodule Gauthic.JWT do
   end
 
   def build(%Credentials{client_email: account, private_key: key}, scope, sub, url) do
-    claims(account, scope, sub, url) |> sign_jwt(key)
+    claims(account, scope, url, sub) |> sign_jwt(key)
   end
 
   defp sign_jwt(claims, key) do
